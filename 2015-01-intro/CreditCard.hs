@@ -29,10 +29,10 @@ main = do
     , quickCheck isReverseDigits
     ]
   _ <- runTestTT $ test
-    [ "doubleEveryOther" ~: ([1,4,3,8] ~=? doubleEveryOther [1,2,3,4])
-    , "sumDigits" ~: (19 ~=? sumDigits [10, 5, 18, 4])
-    , "ccGood" ~: assertBool "good" (luhn 5594589764218858)
-    , "ccBad" ~: assertBool "bad" (not $ luhn 1234567898765432)
+    [ "doubleEveryOther" ~: doubleEveryOther [1,2,3,4] ~?= [1,4,3,8]
+    , "sumDigits" ~: sumDigits [10, 5, 18, 4] ~?= 19
+    , "ccGood" ~: assertBool "good" $ luhn 5594589764218858
+    , "ccBad" ~: assertBool "bad" $ not $ luhn 1234567898765432
     ]
   return ()
     where
