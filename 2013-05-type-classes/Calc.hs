@@ -2,6 +2,7 @@
 
 module Calc where
 
+import qualified Data.Map as M
 import ExprT
 import Parser
 import qualified StackVM as VM
@@ -62,6 +63,41 @@ instance Expr VM.Program where
 compile :: String -> Maybe VM.Program
 compile = parseExp lit add mul
 
+class HasVars a where
+  var :: String -> a
+
+data VarExprT = VLit Integer
+              | VAdd VarExprT VarExprT
+              | VMul VarExprT VarExprT
+              | Var String
+
+instance Expr VarExprT where
+  lit = VLit
+  add = VAdd
+  mul = VMul
+
+instance HasVars VarExprT where
+  var = Var
+
+instance HasVars (M.Map String Integer -> Maybe Integer) where
+  var = M.lookup
+
+instance Expr (M.Map String Integer -> Maybe Integer) where
+  lit = const . Just
+  add a b m = do
+    a' <- a m
+    b' <- b m
+    return $ a' + b'
+  mul a b m = do
+    a' <- a m
+    b' <- b m
+    return $ a' * b'
+
+withVars :: [(String, Integer)]
+         -> (M.Map String Integer -> Maybe Integer)
+         -> Maybe Integer
+withVars vs e = e $ M.fromList vs
+
 main :: IO ()
 main = do
   _ <- runTestTT $ test
@@ -77,5 +113,8 @@ main = do
     , "testSat" ~: (testExp :: Maybe Mod7) ~?= Just (Mod7 0)
     , "stack1" ~: maybe (Left "parse error") VM.stackVM (testExp :: Maybe VM.Program) ~?= Right (VM.IVal (-7))
     , "stack2" ~: maybe (Left "parse error") VM.stackVM (compile "(3 * -4) + 5") ~?= Right (VM.IVal (-7))
+    , "vars1" ~: withVars [("x", 6)] (add (lit 3) (var "x")) ~?= Just 9
+    , "vars2" ~: withVars [("x", 6)] (add (lit 3) (var "y")) ~?= Nothing
+    , "vars3" ~:  withVars [("x", 6), ("y", 3)] (mul (var "x") (add (var "y") (var "x"))) ~?= Just 54
     ]
   return ()
